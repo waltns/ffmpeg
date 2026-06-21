@@ -77,20 +77,16 @@ app.post("/analyze", async (req, res) => {
           if (stream.codec_type === "audio") {
             audioTracks.push({
               index: stream.index,
-              language:
-                stream.tags?.language || "unknown",
-              title:
-                stream.tags?.title || ""
+              language: stream.tags?.language || "unknown",
+              title: stream.tags?.title || ""
             });
           }
 
           if (stream.codec_type === "subtitle") {
             subtitleTracks.push({
               index: stream.index,
-              language:
-                stream.tags?.language || "unknown",
-              title:
-                stream.tags?.title || ""
+              language: stream.tags?.language || "unknown",
+              title: stream.tags?.title || ""
             });
           }
         }
@@ -112,8 +108,7 @@ app.post("/export", async (req, res) => {
   cors(res);
 
   res.json({
-    message:
-      "Export endpoint placeholder. Analyze works first."
+    message: "Export endpoint placeholder. Analyze works first."
   });
 });
 
