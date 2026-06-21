@@ -5,6 +5,9 @@ const { exec } = require("child_process");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const app = express();
+
+app.use(express.json({ limit: "50mb" }));
+
 const r2 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -13,8 +16,6 @@ const r2 = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
   }
 });
-
-app.use(express.json({ limit: "50mb" }));
 
 const ALLOWED_ORIGIN = "https://hi.walts.workers.dev";
 
@@ -91,6 +92,15 @@ app.post("/analyze", async (req, res) => {
             });
           }
 
+          if (stream.codec_type === "subtitle") {
+            subtitleTracks.push({
+              index: stream.index,
+              language: stream.tags?.language || "unknown",
+              title: stream.tags?.title || ""
+            });
+          }
+        }
+
         res.json({
           audioTracks,
           subtitleTracks
@@ -101,17 +111,6 @@ app.post("/analyze", async (req, res) => {
     res.status(500).json({
       error: e.message
     });
-  }
-});
-
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
-
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
   }
 });
 
@@ -210,3 +209,5 @@ app.post("/export", async (req, res) => {
     });
   }
 });
+
+app.listen(process.env.PORT || 10000);
