@@ -1,22 +1,12 @@
-const express = require("express");
-const { exec } = require("child_process");
-
-const app = express();
-
-app.get("/", (req, res) => {
-  exec("ffmpeg -version", (err, stdout, stderr) => {
-    if (err) {
-      return res.json({
-        ffmpeg: false,
-        error: stderr
-      });
-    }
-
-    res.json({
-      ffmpeg: true,
-      version: stdout
-    });
-  });
-});
-
-app.listen(process.env.PORT || 10000);
+{
+  "name": "ffmpeg-api",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "axios": "^1.8.4"
+  }
+}
