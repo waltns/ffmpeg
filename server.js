@@ -1,4 +1,3 @@
-```js
 const express = require("express");
 const axios = require("axios");
 const fs = require("fs");
@@ -119,4 +118,3 @@ app.post("/export", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000);
-```
