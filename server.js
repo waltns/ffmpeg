@@ -104,12 +104,109 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-app.post("/export", async (req, res) => {
-  cors(res);
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
-  res.json({
-    message: "Export endpoint placeholder. Analyze works first."
-  });
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
+  }
 });
 
-app.listen(process.env.PORT || 10000);
+app.post("/export", async (req, res) => {
+  try {
+    cors(res);
+
+    const {
+      url,
+      audio = 0,
+      subtitle = -1,
+      format = "mp4"
+    } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        error: "Missing URL"
+      });
+    }
+
+    const id = Date.now();
+
+    const input = `/tmp/${id}-input`;
+    const output = `/tmp/${id}-output.${format}`;
+
+    const response = await axios({
+      url,
+      method: "GET",
+      responseType: "stream"
+    });
+
+    const writer = fs.createWriteStream(input);
+
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
+
+    let command;
+
+    if (subtitle === -1) {
+      command =
+        `ffmpeg -y -i "${input}" ` +
+        `-map 0:v -map 0:a:${audio} ` +
+        `-sn -c copy "${output}"`;
+    } else {
+      command =
+        `ffmpeg -y -i "${input}" ` +
+        `-map 0:v -map 0:a:${audio} ` +
+        `-map 0:s:${subtitle} ` +
+        `-c copy "${output}"`;
+    }
+
+    exec(command, async (err) => {
+      fs.unlink(input, () => {});
+
+      if (err) {
+        return res.status(500).json({
+          error: err.message
+        });
+      }
+
+      const key =
+        `exports/${Date.now()}.${format}`;
+
+      const fileBuffer =
+        fs.readFileSync(output);
+
+      await r2.send(
+        new PutObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: key,
+          Body: fileBuffer,
+          ContentType:
+            format === "mkv"
+              ? "video/x-matroska"
+              : "video/mp4"
+        })
+      );
+
+      fs.unlink(output, () => {});
+
+      return res.json({
+        success: true,
+        key,
+        url:
+          `https://hi.walts.workers.dev/file/${key}`
+      });
+    });
+
+  } catch (e) {
+    return res.status(500).json({
+      error: e.message
+    });
+  }
+});
